@@ -1,26 +1,190 @@
+#%%
+#实现数据读取
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from scipy import stats
-
+from sklearn.ensemble import _stacking
+from utils.load_my_data import load_gyzq
+from IPython import display
 pd.set_option('display.max_columns', None)
+display.display('svg')
+import warnings
+warnings.filterwarnings('ignore')
 
-if __name__ == '__main__':
-    source_data_root_path = 'e:/hw/personal/python/机器学习数据集/阿里云工业蒸汽'
-    train_data_file = os.path.join(source_data_root_path, 'zhengqi_train.txt')
-    test_data_file = os.path.join(source_data_root_path, 'zhengqi_test.txt')
-    train_data = pd.read_csv(train_data_file, sep='\t')
-    test_data = pd.read_csv(test_data_file, sep='\t')
 
-    #简单查看数据情况
-    print(train_data.head())
-    print(train_data.describe())
+#%%
+source_data_root_path = 'e:/hw/personal/python/机器学习数据集/阿里云工业蒸汽'
+train_data_file = os.path.join(source_data_root_path, 'zhengqi_train.txt')
+test_data_file = os.path.join(source_data_root_path, 'zhengqi_test.txt')
+train_data = pd.read_csv(train_data_file, sep='\t')
+test_data = pd.read_csv(test_data_file, sep='\t')
+# train_data, test_data = load_gyzq()
+#简单查看数据情况
+print(train_data.head())
+print(train_data.describe())
 
-    sns.boxplot(data=train_data)
-    # sns.boxplot()
+feature_columns = [i for i in train_data.columns if i != 'target']
+label_columns = ['target']
 
-    sns.lineplot(data=[-7.5, 7.5])
-    plt.show()
+# sns.boxplot(data=train_data, orient="v")
+# plt.show()
+#
+#%%
+#查看数据的分布
+rows = 15
+cols = 6
+#设置图片的尺寸 宽高
+figure = plt.figure(figsize=(cols*5, rows*5))
+i = 0
+for index, column in enumerate(train_data.columns):
+    print(column)
+    i += 1
+    figure = plt.subplot(rows, cols, i)
+    #绘制第i行的数据分布
+    sns.distplot(train_data[column], fit=stats.norm)
+    # ax.set_xlabel(column)
+    #绘制正太分布图
+    i += 1
+    fig = plt.subplot(rows, cols, i)
+    stats.probplot(train_data[column], plot=plt)
+    # ax.set_xlabel(column)
+
+plt.show()
+# plt.savefig('../result_data/tmp_qq.png')
+
+#%%
+#查看训练数据特征和测试数据特征的分布情况
+i = 0
+fig = plt.figure(figsize=(3*4,14*4))
+for column in feature_columns:
+    train_column_data = train_data[column]
+    test_column_data = test_data[column]
+    i+=1
+    plt.subplot(14, 3, i)
+    sns.kdeplot(train_column_data, color='r', shade=True)
+    sns.kdeplot(test_column_data, color='b', shade=True)
+    plt.xlabel(column)
+    plt.ylabel('F')
+    plt.legend(['train', 'test'])
+
+plt.show()
+
+
+#%%
+#查看各个特征之间的相关性
+plt.figure(figsize=(30, 30))
+corr = train_data.corr()
+
+sns.heatmap(train_data.corr(), annot=True, fmt='.2f', square=True, cmap='RdBu_r')
+
+plt.show()
+#筛选相关系数大于阈值的列
+print(corr['target'])
+threhold = 0.2
+target_field = corr.index[abs(corr['target']) >= threhold]
+no_field = corr.index[abs(corr['target']) < threhold]
+print(no_field)
+#查看各个特征之间的相关性
+plt.figure(figsize=(30, 30))
+sns.heatmap(train_data[target_field].corr(), annot=True, fmt='.2f', square=True, cmap='RdBu_r')
+plt.show()
+
+#%%
+drop_feature_columns = set('V5 V11 V17 V22 '.split() + [i for i in no_field])
+process_train_data = train_data.drop(columns=drop_feature_columns)
+# print(process_train_data.head())
+#将数据进行归一化
+from sklearn.preprocessing import MinMaxScaler
+scaler = MinMaxScaler()
+final_feature_columns = [i for i in process_train_data.columns if i != 'target']
+process_data_x = process_train_data[final_feature_columns]
+process_data_y = process_train_data[['target']]
+
+scaler.fit(process_data_x)
+process_data_x = scaler.transform(process_data_x)
+#使用pca进行降维
+from sklearn.decomposition import PCA
+pca = PCA(n_components=0.98)
+pca.fit(process_data_x)
+pca_data_x = pca.transform(process_data_x)
+print(pca.explained_variance_, pca.explained_variance_ratio_)
+
+#%%
+#创建一个线性回归模型简单验证结果
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+
+model = LinearRegression()
+#测试原始的数据进行模型训练
+source_train_x = train_data[feature_columns].values
+source_train_y = train_data['target']
+
+train_x, test_x, train_y, test_y = train_test_split(source_train_x, source_train_y, test_size=0.2, random_state=10, shuffle=True)
+model.fit(train_x, train_y)
+y_hat = model.predict(test_x)
+print(test_y[:5])
+print(mean_squared_error(test_y, y_hat))
+import xgboost
+xgb = xgboost.XGBRegressor(max_depth=4,
+                    learning_rate=0.2,
+                    n_estimators=300,)
+xgb.fit(train_x, train_y)
+y_hat = xgb.predict(test_x)
+print('d:{} n:{} l:{} mse:{} '.format(8, 100, 0.8, mean_squared_error(test_y, y_hat)))
+
+#%%
+model = LinearRegression()
+train_x, test_x, train_y, test_y = train_test_split(process_data_x, process_data_y, test_size=0.2, random_state=10, shuffle=True)
+model.fit(train_x, train_y)
+y_hat = model.predict(test_x)
+print(test_y[:5])
+print(mean_squared_error(test_y, y_hat))
+
+import xgboost
+xgb = xgboost.XGBRegressor(max_depth=4,
+                    learning_rate=0.2,
+                    n_estimators=300,)
+xgb.fit(train_x, train_y)
+y_hat = xgb.predict(test_x)
+print('d:{} n:{} l:{} mse:{} '.format(8, 100, 0.8, mean_squared_error(test_y, y_hat)))
+
+
+#%%
+model = LinearRegression()
+train_x, test_x, train_y, test_y = train_test_split(pca_data_x, process_data_y, test_size=0.2, random_state=10, shuffle=True)
+model.fit(train_x, train_y)
+y_hat = model.predict(test_x)
+print(test_y[:5])
+print(mean_squared_error(test_y, y_hat))
+
+import xgboost
+xgb = xgboost.XGBRegressor(max_depth=4,
+                    learning_rate=0.2,
+                    n_estimators=300,)
+xgb.fit(train_x, train_y)
+y_hat = xgb.predict(test_x)
+print('d:{} n:{} l:{} mse:{} '.format(8, 100, 0.8, mean_squared_error(test_y, y_hat)))
+
+#%%
+print(np.linspace(0.5,1,10))
+#%%
+#使用xgboost模型
+import xgboost
+for d in range(5, 15):
+    for l in np.linspace(0.5, 1, 10):
+        for n in range(50, 150, 10):
+            xgb = xgboost.XGBRegressor(max_depth=8,
+                    learning_rate=0.8,
+                    n_estimators=100,)
+            xgb.fit(train_x, train_y)
+            y_hat = xgb.predict(test_x)
+            print('d:{} n:{} l:{} mse:{} '.format(d, n, l, mean_squared_error(test_y, y_hat)))
+
+
+
+
 

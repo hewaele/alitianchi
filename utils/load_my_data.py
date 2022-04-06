@@ -12,3 +12,7 @@ def load_gyzq():
 
     return train_data, test_data
 
+if __name__ == '__main__':
+    pass
+
+
