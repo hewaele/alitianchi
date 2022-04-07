@@ -126,6 +126,7 @@ source_train_y = train_data['target']
 train_x, test_x, train_y, test_y = train_test_split(source_train_x, source_train_y, test_size=0.2, random_state=10, shuffle=True)
 model.fit(train_x, train_y)
 y_hat = model.predict(test_x)
+
 print(test_y[:5])
 print(mean_squared_error(test_y, y_hat))
 import xgboost
@@ -145,8 +146,8 @@ print(test_y[:5])
 print(mean_squared_error(test_y, y_hat))
 
 import xgboost
-xgb = xgboost.XGBRegressor(max_depth=4,
-                    learning_rate=0.2,
+xgb = xgboost.XGBRegressor(max_depth=5,
+                    learning_rate=0.1,
                     n_estimators=300,)
 xgb.fit(train_x, train_y)
 y_hat = xgb.predict(test_x)
@@ -175,14 +176,93 @@ print(np.linspace(0.5,1,10))
 #使用xgboost模型
 import xgboost
 for d in range(5, 15):
-    for l in np.linspace(0.5, 1, 10):
-        for n in range(50, 150, 10):
+    for l in np.linspace(0.1, 1, 10):
+        for n in range(50, 150, 200):
             xgb = xgboost.XGBRegressor(max_depth=8,
                     learning_rate=0.8,
                     n_estimators=100,)
             xgb.fit(train_x, train_y)
             y_hat = xgb.predict(test_x)
             print('d:{} n:{} l:{} mse:{} '.format(d, n, l, mean_squared_error(test_y, y_hat)))
+
+
+#%%
+from sklearn.ensemble import StackingRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.linear_model import Lasso, LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn import metrics
+import xgboost
+
+#创建线性回归，knn, gbdt xgboost进行融合
+liner = LinearRegression()
+knn = KNeighborsRegressor()
+gbdt = GradientBoostingRegressor(n_estimators=200, subsample=0.7, max_depth=5)
+xgb = xgboost.XGBRegressor()
+
+# for ai in np.linspace(0.1, 1, 10):
+final_estimator = LinearRegression()
+stacking_model = StackingRegressor([('lr', liner), ('knn', knn), ('gbdt', gbdt), ('xgb', xgb)], cv=5, final_estimator=final_estimator)
+train_x, test_x, train_y, test_y = train_test_split(source_train_x, source_train_y, test_size=0.2, random_state=10, shuffle=True)
+stacking_model.fit(train_x, train_y)
+y_hat = stacking_model.predict(test_x)
+
+print('惩罚权重：{} train loss: {} test loss: {}'.format('Liner', metrics.mean_squared_error(train_y, stacking_model.predict(train_x)), metrics.mean_squared_error(test_y, y_hat)))
+
+#%%
+#实现k折交叉验证
+from sklearn import metrics
+from sklearn.model_selection import KFold
+kf = KFold(shuffle=True, random_state=2022)
+train_mse_list = []
+test_mse_list = []
+
+for i, j in kf.split(source_train_x, source_train_y):
+    #创建一个xgboost进行模型的验证测试
+    xgb = xgboost.XGBRegressor(max_depth=4,
+                    learning_rate=0.1,
+                    n_estimators=200)
+    xgb.fit(source_train_x[i], source_train_y[i])
+    train_mse = metrics.mean_squared_error(source_train_y[i], xgb.predict(source_train_x[i]))
+    test_mse = metrics.mean_squared_error(source_train_y[j], xgb.predict(source_train_x[j]))
+    train_mse_list.append(train_mse)
+    test_mse_list.append(test_mse)
+
+    print('train mse:{}  test mse: {}'.format(train_mse, test_mse))
+
+print('mean train mse: {}  mean test mse:  {}'.format(np.array(train_mse_list).mean(), np.array(test_mse_list).mean()))
+#%%
+
+import xgboost
+test_xgb = xgboost.XGBRegressor()
+print(test_xgb)
+
+from sklearn.model_selection import GridSearchCV
+search_param = {'max_depth': [i for i in range(3, 8)],
+                'learning_rate': np.linspace(0.1, 1, 10),
+                'n_estimators': [50, 100, 150, 200, 250, 300]}
+clg = GridSearchCV(xgboost.XGBRegressor(), param_grid=search_param, cv=5, return_train_score=True)
+clg.fit(source_train_x, source_train_y)
+model = clg.best_estimator_
+print(model)
+print(clg.cv_results_)
+
+#%%
+def test_desc(a, b):
+    """
+
+    param tip
+    ---------
+    :a first numbers
+
+    :b second numbers
+
+    :return:
+    """
+
+
+
 
 
 

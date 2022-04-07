@@ -14,7 +14,7 @@ from mpl_toolkits.mplot3d import Axes3D
 # myfont = fm.FontProperties(fname="/Library/Fonts/Songti.ttc", size=14)
 # matplotlib.rcParams["axes.unicode_minus"] = False
 
-
+#%%
 def simple_plot():
     """
     simple plot
@@ -31,7 +31,7 @@ def simple_plot():
         plt.cla()
 
         # 设定标题等
-        plt.title("动态曲线图", fontproperties=myfont)
+        plt.title("动态曲线图")
         plt.grid(True)
 
         # 生成测试数据
@@ -39,12 +39,12 @@ def simple_plot():
         y_cos, y_sin = np.cos(x), np.sin(x)
 
         # 设置X轴
-        plt.xlabel("X轴", fontproperties=myfont)
+        plt.xlabel("X轴")
         plt.xlim(-4 + 0.1*index, 4 + 0.1*index)
         plt.xticks(np.linspace(-4 + 0.1*index, 4+0.1*index, 9, endpoint=True))
 
         # 设置Y轴
-        plt.ylabel("Y轴", fontproperties=myfont)
+        plt.ylabel("Y轴")
         plt.ylim(-1.0, 1.0)
         plt.yticks(np.linspace(-1, 1, 9, endpoint=True))
 
@@ -53,7 +53,7 @@ def simple_plot():
         plt.plot(x, y_sin, "g-", linewidth=2.0, label="sin示例")
 
         # 设置图例位置,loc可以为[upper, lower, left, right, center]
-        plt.legend(loc="upper left", prop=myfont, shadow=True)
+        plt.legend(loc="upper left", shadow=True)
 
         # 暂停
         plt.pause(0.1)
@@ -64,9 +64,9 @@ def simple_plot():
     # 图形显示
     plt.show()
     return
-# simple_plot()
+simple_plot()
 
-
+#%%
 def scatter_plot():
     """
     scatter plot
