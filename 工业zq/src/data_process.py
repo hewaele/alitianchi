@@ -22,6 +22,7 @@ test_data_file = os.path.join(source_data_root_path, 'zhengqi_test.txt')
 train_data = pd.read_csv(train_data_file, sep='\t')
 test_data = pd.read_csv(test_data_file, sep='\t')
 # train_data, test_data = load_gyzq()
+
 #简单查看数据情况
 print(train_data.head())
 print(train_data.describe())
@@ -218,14 +219,26 @@ kf = KFold(shuffle=True, random_state=2022)
 train_mse_list = []
 test_mse_list = []
 
-for i, j in kf.split(source_train_x, source_train_y):
+#对数据进行box cox变换
+from scipy import stats
+new_x = []
+print(process_data_x.shape)
+for i in range(process_data_x.shape[1]):
+    x = stats.boxcox(process_data_x[:, i]+1, 3)
+    new_x.append(x)
+
+new_x = np.array(new_x)
+x = source_train_x
+print(new_x.shape)
+for i, j in kf.split(x, source_train_y):
+
     #创建一个xgboost进行模型的验证测试
-    xgb = xgboost.XGBRegressor(max_depth=4,
+    xgb = xgboost.XGBRegressor(max_depth=5,
                     learning_rate=0.1,
                     n_estimators=200)
-    xgb.fit(source_train_x[i], source_train_y[i])
-    train_mse = metrics.mean_squared_error(source_train_y[i], xgb.predict(source_train_x[i]))
-    test_mse = metrics.mean_squared_error(source_train_y[j], xgb.predict(source_train_x[j]))
+    xgb.fit(x[i], source_train_y[i])
+    train_mse = metrics.mean_squared_error(source_train_y[i], xgb.predict(x[i]))
+    test_mse = metrics.mean_squared_error(source_train_y[j], xgb.predict(x[j]))
     train_mse_list.append(train_mse)
     test_mse_list.append(test_mse)
 
@@ -249,7 +262,7 @@ print(model)
 print(clg.cv_results_)
 
 #%%
-def test_desc(a, b):
+def test_corr(a, b):
     """
 
     param tip
@@ -260,6 +273,25 @@ def test_desc(a, b):
 
     :return:
     """
+    s = [0 for i in range(1000)]
+    a = [i for i in range(1000)]
+    import random
+    np.random.normal()
+    index = random.sample(a, 20)
+    result = []
+    for i in range(1000):
+        if i not in index:
+            result.append(0)
+        else:
+            result.append(random.randint(1,5))
+
+    b = [random.randint(1, 20) for i in range(1000)]
+    print(np.array(s).var())
+    print(np.array(result).var())
+    print(np.array(b).var())
+
+test_corr(1, 2)
+
 
 
 

@@ -1,14 +1,16 @@
+#%%
 import pandas as pd
 import os
 import torch
 import numpy as np
-from util.load_my_data import load_gyzq
+from utils.load_my_data import load_gyzq
 from sklearn.model_selection import train_test_split
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn import metrics
 train_data, test_data = load_gyzq()
 
+#%%
 #数据的读入及转换为tensor
 feature_names = [i for i in train_data.columns if i != 'target']
 train_x = train_data[feature_names]
@@ -60,7 +62,7 @@ cart.fit(train_x, train_y)
 y = cart.predict(val_x)
 print(metrics.mean_squared_error(val_y, y))
 
-for epoch in range(2):
+for epoch in range(10):
     for xi, yi in zip(tensor_train_x, tensor_train_y):
         tmp_l = loss_function(yi, liner_model(xi, w, bias))
         #计算梯度
@@ -92,6 +94,7 @@ net[0].weight.data.normal_(0, 0.01)
 net[0].bias.data.fill_(1)
 ll = nn.MSELoss()
 opt = torch.optim.SGD(net.parameters(), lr=0.01)
+
 #执行训练
 for epoch in range(50):
     for xi, yi in zip(tensor_train_x, tensor_train_y):
@@ -107,7 +110,103 @@ for epoch in range(50):
     tmp_l = ll(net(tensor_val_x), tensor_val_y)
     print(epoch, tmp_l)
 
+#%%
+import matplotlib.pyplot as plt
+#生成随机数据
+def creat_data(samples, features, db=None):
+    w = torch.rand(features)
+    x = torch.rand(size=(samples, features))*5
+    bias = torch.tensor(1.5)
+    y = torch.matmul(x, w) + bias + torch.normal(0, 0.1, [samples])
+    print(y.shape)
 
+    print(x)
+    print(y)
+    plt.scatter(x, y)
+    plt.show()
 
+creat_data(50, 1)
 
+#%%
+from sklearn import datasets
+# d = datasets._samples_generator.make_regression(100, 1, noise=0.1)
+# plt.scatter(d[0], d[1])
+# plt.show()
+from torch.utils import data as td
+train_data_x, train_data_y = datasets._samples_generator.make_moons(300, noise=0.1)
+#将标签转换为one hot编码
 
+#创建一个数据类
+train_datasets = td.TensorDataset(torch.tensor(train_data_x, dtype=torch.float32),
+                                  torch.tensor(train_data_y))
+train_data_iter = td.DataLoader(train_datasets, 10)
+print(train_data_x.shape)
+for ei in range(2):
+    print('epoch {}'.format(ei))
+    for xi, yi in train_data_iter:
+        # pass
+        print(xi)
+plt.scatter(train_data_x[:, 0], train_data_x[:, 1], c=train_data_y)
+plt.show()
+
+test_data_x, test_data_y = datasets._samples_generator.make_moons(100, noise=0.08)
+tensor_test_x = torch.tensor(test_data_x, dtype=torch.float32)
+tensor_test_y = torch.tensor(test_data_y)
+# test_data_iter = td.DataLoader(train_datasets, 10)
+
+#%%
+import torch.nn as nn
+from sklearn.metrics import accuracy_score
+#实现一个简单的二分类
+net = nn.Sequential(nn.Linear(train_data_x.shape[1], 3),
+                    nn.Sigmoid(),
+                    nn.Linear(3, 2),
+                    # nn.Softmax(dim=1)
+                    )
+net_loss = nn.CrossEntropyLoss()
+net_lr = 0.1
+net_optimer = torch.optim.SGD(net.parameters(), net_lr)
+
+#初始化参数
+net[0].weight.data.normal_(0, 0.01)
+net[0].bias.data.fill_(-1)
+
+net[2].weight.data.normal_(0, 0.01)
+net[2].bias.data.fill_(1)
+
+epochs = 200
+#执行训练
+for epoch in range(epochs):
+    for xi, yi in train_data_iter:
+        #计算网络的损失
+        # print(xi, yi)
+        y_hat = net(xi)
+        ll = net_loss(y_hat, yi)
+        net_optimer.zero_grad()
+        ll.backward()
+        net_optimer.step()
+
+    #计算损失
+    with torch.no_grad():
+        y_hat = net(tensor_test_x)
+        epoch_train_loss = net_loss(y_hat, tensor_test_y)
+
+        #计算准确率
+        # print(y_hat)
+        ac = accuracy_score(tensor_test_y, np.argmax(y_hat, axis=1))
+        print('epoch: {} val loss: {}, accuracy: {}'.format(epoch, epoch_train_loss, ac))
+        c_map = {0:'r', -1:'g', 1:'b'}
+        #网络输出全为0
+    # s1 = plt.scatter(test_data_x[:, 0], test_data_x[:, 1], c=[c_map[int(i)] for i in tensor_test_y - np.argmax(y_hat, axis=1)])
+    # plt.legend()
+    # plt.show()
+
+y_hat = net(tensor_test_x)
+print(y_hat)
+#%%
+y = torch.tensor([0, 2])
+y_hat = torch.tensor([[0.1, 0.3, 0.6], [0.3, 0.2, 0.5]])
+l = nn.CrossEntropyLoss()(y_hat, y)
+print(np.argmax(y_hat, axis=1)-y)
+
+# print(l)
