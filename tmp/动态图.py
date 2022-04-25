@@ -66,7 +66,7 @@ def simple_plot():
     return
 # simple_plot()
 
-
+#%%
 def scatter_plot():
     """
     scatter plot
@@ -106,7 +106,7 @@ def scatter_plot():
     return
 # scatter_plot()
 
-
+#%%
 def three_dimension_scatter():
     """
     3d scatter plot
