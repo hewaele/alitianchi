@@ -129,6 +129,7 @@ loss = nn.CrossEntropyLoss()
 optimer = torch.optim.SGD(my_net.parameters(), lr=0.1)
 epochs = 50
 
+
 #执行网络训练
 for epoch in range(epochs):
     for xi, yi in train_iter:
