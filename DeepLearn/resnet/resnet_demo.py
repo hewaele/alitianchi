@@ -25,7 +25,6 @@ from torch.utils.tensorboard import SummaryWriter
 #     time.sleep(1)
 
 #%%下载
-
 transfunc = torchvision.transforms.Compose([torchvision.transforms.Resize((224, 224)), torchvision.transforms.ToTensor()])
 
 # root_path = '../resnet'
@@ -35,14 +34,17 @@ transfunc = torchvision.transforms.Compose([torchvision.transforms.Resize((224, 
 root_path = '../simple_vgg/data'
 train_data = FashionMNIST(root_path, train=True, transform=transfunc, download=True)
 test_data = FashionMNIST(root_path, train=False, transform=transfunc, download=True)
+
 tensor_train = DataLoader(train_data, batch_size=32)
 tensor_test = DataLoader(test_data, batch_size=32)
 
 print(len(tensor_train))
 print(len(tensor_test))
 
+
 train_iter =tensor_train
 test_iter = tensor_test
+
 
 #%%
 import numpy as np
@@ -67,7 +69,9 @@ class ResnetBlock(torch.nn.Module):
                                    nn.ReLU())
         self.conv2 = nn.Conv2d(output_features, output_features, 3, 1, padding)
         self.bn = nn.BatchNorm2d(output_features)
+
         self.conv3 = nn.Conv2d(self.input_features, self.output_features, 1, self.stride, 0)
+
         self.act = nn.ReLU()
 
     def forward(self, X):
@@ -78,6 +82,7 @@ class ResnetBlock(torch.nn.Module):
         #判断是否对输入进行1x1卷积
         if self.stride == 2:
             X = self.conv3(X)
+
         hid += X
         #对最后的结果进行激活
         return self.act(hid)
@@ -86,6 +91,7 @@ header = nn.Sequential(nn.Conv2d(3, 64, 7, 2, 3), nn.BatchNorm2d(64), nn.ReLU(),
 # print(next(train_iter))
 test_block = ResnetBlock(64, 128, 2, 1)
 test_net = nn.Sequential(header, test_block)
+
 # print('执行块测试')
 # y_hat_test = test_net(next(train_iter)[0])
 # print(y_hat_test.shape)
@@ -107,6 +113,7 @@ my_net = nn.Sequential(header, b2, b3, b4, b5, out)
 writers = SummaryWriter('./resnet_log', comment='resnet')
 # with SummaryWriter(comment='LeNet') as w:
 #     w.add_graph(my_net, [next(train_iter)[0], ])
+
 writers.add_graph(my_net, [torch.rand((32, 1, 224, 224)), ])
 
 #对网路进行初始化
@@ -152,6 +159,7 @@ for epoch in range(epochs):
         optimer.zero_grad()
         tmp_loss.mean().backward()
         optimer.step()
+
         train_ac += torch.sum(torch.argmax(y_hat, dim=1) == yi, dtype=torch.float32)
         train_count += xi.shape[0]
         train_loss += tmp_loss.sum()
